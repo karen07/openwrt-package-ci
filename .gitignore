@@ -1,0 +1,4 @@
+.openwrt-build/
+__pycache__/
+*.pyc
+*.apk
