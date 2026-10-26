@@ -1,18 +1,18 @@
 # OpenWrt package CI
 
-Shared GitHub Actions CI for building `karen07/*-openwrt-package` repositories with the OpenWrt SDK.
-
-This repository contains the common build helper, target matrix generator and reusable GitHub Actions workflow used by the OpenWrt package repositories.
+Shared GitHub Actions infrastructure for building OpenWrt packages with the OpenWrt SDK.
+It contains the common build helper, target matrix generator, and reusable workflow.
 
 ## Описание
 
-Этот репозиторий содержит общую CI-инфраструктуру для сборки OpenWrt-пакетов из репозиториев `karen07/*-openwrt-package`.
+Общая инфраструктура GitHub Actions для сборки пакетов OpenWrt с помощью OpenWrt SDK.
+Содержит скрипт сборки, генератор матрицы целевых платформ и переиспользуемый workflow.
 
 Общая логика сборки вынесена сюда, чтобы не хранить одинаковые копии `openwrt-build.sh`, `openwrt-matrix.py` и GitHub Actions workflow в каждом репозитории пакета.
 
 Репозитории пакетов содержат только собственные файлы пакета, `openwrt-build.env` и небольшой workflow, который вызывает reusable workflow из этого репозитория.
 
-## Что находится в репозитории
+## Структура проекта
 
 - `.github/workflows/openwrt-build.yml` - общий reusable GitHub Actions workflow;
 - `.github/workflows/check.yml` - проверки самого CI-репозитория;
