@@ -1,23 +1,46 @@
-# OpenWrt package CI
+# OpenWrt Package CI
 
 Shared GitHub Actions infrastructure for building OpenWrt packages with the OpenWrt SDK.
 It contains the common build helper, target matrix generator, and reusable workflow.
 
-## Описание
-
 Общая инфраструктура GitHub Actions для сборки пакетов OpenWrt с помощью OpenWrt SDK.
 Содержит скрипт сборки, генератор матрицы целевых платформ и переиспользуемый workflow.
+
+## Описание
 
 Общая логика сборки вынесена сюда, чтобы не хранить одинаковые копии `openwrt-build.sh`, `openwrt-matrix.py` и GitHub Actions workflow в каждом репозитории пакета.
 
 Репозитории пакетов содержат только собственные файлы пакета, `openwrt-build.env` и небольшой workflow, который вызывает reusable workflow из этого репозитория.
 
-## Структура проекта
+## Разработка и проверка изменений
 
-- `.github/workflows/openwrt-build.yml` - общий reusable GitHub Actions workflow;
-- `.github/workflows/check.yml` - проверки самого CI-репозитория;
-- `openwrt-build.sh` - сборка пакетов через OpenWrt SDK;
-- `openwrt-matrix.py` - генератор списка OpenWrt target/subtarget для matrix build.
+**Основные точки изменения:**
+
+- `openwrt-build.sh` - общий сценарий сборки пакетов с помощью OpenWrt SDK;
+- `openwrt-matrix.py` - поиск и фильтрация target/subtarget для матрицы;
+- `.github/workflows/openwrt-build.yml` - переиспользуемый workflow GitHub Actions.
+
+**Проверка изменений:** Изменения общего workflow могут затронуть все репозитории `*-openwrt-package`, поэтому проверяйте вместе параметры workflow, переменные `openwrt-build.env` в вызывающих проектах и аргументы `openwrt-build.sh`. Не путайте версию OpenWrt с версией исходного пакета.
+
+## Сборка
+
+Конкретный список OpenWrt-версий, target и subtarget формируется `openwrt-matrix.py`.
+
+Сам пакет собирается `openwrt-build.sh` в соответствующем OpenWrt SDK.
+
+Изменения, добавленные в ветку `main` этого репозитория, будут использоваться последующими CI-запусками всех package-репозиториев, которые ссылаются на:
+
+```yaml
+uses: karen07/openwrt-package-ci/.github/workflows/openwrt-build.yml@main
+```
+
+Таким образом, общую логику CI достаточно изменить в одном месте.
+
+**Граница совместимости:** ссылки вида `@main` не закрепляют версию общего
+workflow. Новые изменения в `main` могут повлиять на последующие сборки
+вызывающих репозиториев без правок их собственного кода. При изменении
+входных параметров workflow или формата `openwrt-build.env` следует
+одновременно сверять все репозитории-потребители.
 
 ## Использование
 
@@ -50,16 +73,12 @@ amneziawg=kmod-amneziawg
 "
 ```
 
-## Сборка
+## Структура проекта
 
-Конкретный список OpenWrt-версий, target и subtarget формируется `openwrt-matrix.py`.
+- `.github/workflows/openwrt-build.yml` - общий reusable GitHub Actions workflow;
+- `openwrt-build.sh` - сборка пакетов через OpenWrt SDK;
+- `openwrt-matrix.py` - генератор списка OpenWrt target/subtarget для matrix build.
 
-Сам пакет собирается `openwrt-build.sh` в соответствующем OpenWrt SDK.
+## Лицензия
 
-Изменения, добавленные в ветку `main` этого репозитория, будут использоваться последующими CI-запусками всех package-репозиториев, которые ссылаются на:
-
-```yaml
-uses: karen07/openwrt-package-ci/.github/workflows/openwrt-build.yml@main
-```
-
-Таким образом, общую логику CI достаточно изменить в одном месте.
+Проект распространяется под лицензией GNU Affero General Public License v3.0. Подробности см. в файле [LICENSE](LICENSE).
