@@ -20,7 +20,27 @@ It contains the common build helper, target matrix generator, and reusable workf
 - `openwrt-matrix.py` - поиск и фильтрация target/subtarget для матрицы;
 - `.github/workflows/openwrt-build.yml` - переиспользуемый workflow GitHub Actions.
 
-**Проверка изменений:** Изменения общего workflow могут затронуть все репозитории `*-openwrt-package`, поэтому проверяйте вместе параметры workflow, переменные `openwrt-build.env` в вызывающих проектах и аргументы `openwrt-build.sh`. Не путайте версию OpenWrt с версией исходного пакета.
+**Поток сборки:** `workflow_call` получает `tag_name`, `package`, `include`
+и `exclude`. Задача `generate-config` удаляет ведущую `v` из версии и
+вызывает `openwrt-matrix.py`, который читает каталог релизов OpenWrt,
+фильтрует `target/subtarget` и получает `pkgarch`. Задача `build` создаёт
+job для каждой записи матрицы, копирует `openwrt-build.sh` в каталог
+вызывающего проекта и собирает пакет с помощью SDK. Результат публикуется
+как `release/*.apk` (или как artifact при запуске через `act`).
+
+**Граница конфигурации:** `openwrt-build.sh` загружает `openwrt-build.env`
+из каталога, где расположен сам скрипт. Именно поэтому workflow копирует
+его в репозиторий пакета. `PACKAGE_DIRS` задаёт каталоги исходных пакетов,
+а `PACKAGE_OUTPUTS` сопоставляет их с именами выходных APK. Изменения
+параметров вызова, переменных окружения и схемы JSON-матрицы нужно
+согласовывать между тремя файлами и вызывающими репозиториями.
+
+**Проверка изменений:** При правке матрицы проверьте нормализацию версии,
+include/exclude, пустую выборку и получение `pkgarch`; при правке сборки -
+режимы `install`, `build-router`, `build-target` и параметры
+`openwrt-build.env`. Изменения reusable workflow затрагивают все
+репозитории `*-openwrt-package`, особенно использующие `@main`.
+Проверка выполнения CI требует GitHub Actions и доступа к SDK.
 
 ## Сборка
 
