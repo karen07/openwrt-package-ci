@@ -120,8 +120,20 @@ EOF_USAGE
 Examples:
   ./openwrt-build.sh install all router
   ./openwrt-build.sh build-router all router 25.12.6
-  ./openwrt-build.sh build-router all router 25.12.6 release
-  ./openwrt-build.sh build-target all 25.12.6 x86 64 x86_64 release
+  ./openwrt-build.sh build-router all router SNAPSHOT artifacts
+  ./openwrt-build.sh build-target all 25.12.6 x86 64 x86_64 artifacts
+  ./openwrt-build.sh build-target all 25.12-SNAPSHOT x86 64 x86_64 artifacts
+  ./openwrt-build.sh build-target all SNAPSHOT x86 64 x86_64 artifacts
+  ./openwrt-build.sh build-target all master x86 64 x86_64 artifacts
+
+Versions:
+  25.12.6         Stable release: releases/25.12.6/
+  25.12-SNAPSHOT  Release-branch snapshot: releases/25.12-SNAPSHOT/
+  SNAPSHOT        Development snapshot (OpenWrt master): snapshots/
+  master          Alias for SNAPSHOT
+
+The optional [output-dir] is only a local directory for APK files.
+It does not select the OpenWrt release or snapshot channel.
 EOF_USAGE
 }
 
@@ -242,6 +254,46 @@ if [ -n "$ROUTER" ]; then
 fi
 
 [ -n "$VERSION" ] || die "Cannot determine OpenWrt VERSION"
+
+# The OpenWrt master branch is published as SNAPSHOT. Release-branch
+# snapshots keep their release prefix (e.g. 25.12-SNAPSHOT).
+VERSION="${VERSION#v}"
+case "$VERSION" in
+    master | MASTER | snapshot | SNAPSHOT)
+        VERSION=SNAPSHOT
+        ;;
+    *-snapshot)
+        VERSION="${VERSION%-snapshot}-SNAPSHOT"
+        ;;
+    *)
+        :
+        ;;
+esac
+
+case "$VERSION" in
+    SNAPSHOT)
+        CHANNEL=snapshots
+        IS_SNAPSHOT=1
+        ;;
+    *-SNAPSHOT)
+        CHANNEL="releases/$VERSION"
+        IS_SNAPSHOT=1
+        ;;
+    *)
+        CHANNEL="releases/$VERSION"
+        IS_SNAPSHOT=0
+        ;;
+esac
+
+# Reject invalid strings before using VERSION to form paths or filenames.
+case "$VERSION" in
+    '' | *[!a-zA-Z0-9._-]* | *..*)
+        die "Invalid OpenWrt version: $VERSION"
+        ;;
+    *)
+        :
+        ;;
+esac
 [ -n "$BOARD" ] || die "Cannot determine OPENWRT_BOARD"
 [ -n "$BOARD_ARCH" ] || die "Cannot determine OPENWRT_ARCH"
 [ -n "$TARGET" ] || die "Cannot determine OpenWrt target from OPENWRT_BOARD"
@@ -259,13 +311,14 @@ fi
 mkdir -p "$WORK_DIR" || die "Cannot create work dir: $WORK_DIR"
 cd "$WORK_DIR" || die "Cannot enter work dir: $WORK_DIR"
 
-SDK_URL="https://mirror.berlin.freifunk.net/downloads.openwrt.org/releases/$VERSION/targets/$BOARD/"
+SDK_URL="https://mirror.berlin.freifunk.net/downloads.openwrt.org/$CHANNEL/targets/$BOARD/"
 
 echo "MODE:          $MODE"
 echo "PACKAGE:       $PACKAGE_NAME"
 echo "PACKAGE_DIRS:  $SELECTED_PACKAGE_DIRS"
 echo "ROUTER:        ${ROUTER:-<none>}"
 echo "VERSION:       $VERSION"
+echo "CHANNEL:       $CHANNEL"
 echo "BOARD:         $BOARD"
 echo "TARGET:        $TARGET"
 echo "SUBTARGET:     $SUBTARGET"
@@ -300,6 +353,17 @@ case "$SDK_ARCHIVE" in
         die "Unsupported SDK archive format: $SDK_ARCHIVE"
         ;;
 esac
+
+# Snapshot SDK filenames may stay unchanged across daily rebuilds. Never
+# reuse an older archive or extracted SDK for a moving snapshot.
+if [ "$IS_SNAPSHOT" -eq 1 ]; then
+    case "$SDK_ARCHIVE" in
+        openwrt-sdk-*.tar.xz | openwrt-sdk-*.tar.zst | openwrt-sdk-*.tar.gz) ;;
+        *) die "Unexpected SDK filename: $SDK_ARCHIVE" ;;
+    esac
+    rm -f "$SDK_ARCHIVE" || die "Cannot remove old snapshot SDK archive"
+    rm -rf "$SDK_DIR" || die "Cannot remove old snapshot SDK directory"
+fi
 
 if [ ! -f "$SDK_ARCHIVE" ]; then
     echo "Downloading $SDK_ARCHIVE"
@@ -379,7 +443,7 @@ remove_old_apks() {
         -delete 2>/dev/null || true
 }
 
-release_apk_name() {
+output_apk_name() {
     package_name="$1"
 
     printf '%s_v%s_%s_%s_%s.apk\n' \
@@ -396,16 +460,16 @@ install_or_copy_apk() {
     apk_file=$(basename "$apk_path")
 
     if [ -n "$COPY_ONLY" ]; then
-        release_name=$(release_apk_name "$package_name")
+        output_name=$(output_apk_name "$package_name")
 
         if [ -n "$OUTPUT_DIR" ]; then
-            destination="$OUTPUT_DIR/$release_name"
+            destination="$OUTPUT_DIR/$output_name"
         else
-            destination="$CALLER_DIR/$release_name"
+            destination="$CALLER_DIR/$output_name"
         fi
 
         cp "$apk_path" "$destination" \
-            || die "Cannot save $release_name"
+            || die "Cannot save $output_name"
 
         echo "Saved: $destination"
         return

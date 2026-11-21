@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a GitHub Actions build matrix for OpenWrt release targets.
+"""Generate a GitHub Actions build matrix for OpenWrt releases and snapshots.
 
 The script intentionally uses only the Python standard library.
 
@@ -8,6 +8,9 @@ Positional interface:
 
 Examples:
     ./openwrt-matrix.py 25.12.6
+    ./openwrt-matrix.py 25.12-SNAPSHOT 'x86/64'
+    ./openwrt-matrix.py SNAPSHOT 'x86/64'
+    ./openwrt-matrix.py master 'x86/64'
     ./openwrt-matrix.py 25.12.6 '*'
     ./openwrt-matrix.py 25.12.6 'x86/*'
     ./openwrt-matrix.py 25.12.6 'x86/64,mediatek/filogic'
@@ -86,7 +89,26 @@ def normalize_version(version: str) -> str:
     if not version:
         die("OpenWrt version is required")
 
+    if version.lower() in {"master", "snapshot"}:
+        return "SNAPSHOT"
+
+    if version.lower().endswith("-snapshot"):
+        version = version[: -len("-snapshot")] + "-SNAPSHOT"
+
+    valid_characters = (
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+    )
+    if any(char not in valid_characters for char in version) or ".." in version:
+        die(f"invalid OpenWrt version: {version!r}")
+
     return version
+
+
+def version_channel(version: str) -> str:
+    """Return a downloads.openwrt.org path prefix for a canonical version."""
+    if version == "SNAPSHOT":
+        return "snapshots"
+    return f"releases/{version}"
 
 
 def split_patterns(value: str | None) -> list[str]:
@@ -217,7 +239,7 @@ def openwrt_matrix(
     version = normalize_version(version)
     base_url = (
         "https://mirror.berlin.freifunk.net/downloads.openwrt.org/"
-        f"releases/{version}/targets/"
+        f"{version_channel(version)}/targets/"
     )
 
     targets = directory_links(base_url)
@@ -277,7 +299,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
     parser.add_argument(
         "version",
-        help="OpenWrt release version, with or without leading v",
+        help="OpenWrt version (25.12.6, 25.12-SNAPSHOT, SNAPSHOT, or master)",
     )
 
     parser.add_argument(

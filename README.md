@@ -27,13 +27,15 @@ It contains the common build helper, target matrix generator, and reusable workf
 - `openwrt-matrix.py` - поиск и фильтрация target/subtarget для матрицы;
 - `.github/workflows/openwrt-build.yml` - переиспользуемый workflow GitHub Actions.
 
-**Поток сборки:** `workflow_call` получает `tag_name`, `package`, `include`
-и `exclude`. Задача `generate-config` удаляет ведущую `v` из версии и
-вызывает `openwrt-matrix.py`, который читает каталог релизов OpenWrt,
+**Поток сборки:** `workflow_call` получает `openwrt_version` (или прежний
+`tag_name`), `package`, `include` и `exclude`. `generate-config` нормализует
+версию и вызывает `openwrt-matrix.py`, который читает нужный канал OpenWrt,
 фильтрует `target/subtarget` и получает `pkgarch`. Задача `build` создаёт
 job для каждой записи матрицы, копирует `openwrt-build.sh` в каталог
-вызывающего проекта и собирает пакет с помощью SDK. Результат публикуется
-как `release/*.apk` (или как artifact при запуске через `act`).
+вызывающего проекта и собирает пакет с помощью SDK. Готовые файлы кладутся
+в каталог `artifacts/`: для стабильных версий они публикуются как GitHub
+Release, а для Snapshot загружаются как GitHub Actions artifacts. При запуске
+через `act` также используются artifacts.
 
 **Граница конфигурации:** `openwrt-build.sh` загружает `openwrt-build.env`
 из каталога, где расположен сам скрипт. Именно поэтому workflow копирует
@@ -55,10 +57,31 @@ include/exclude, пустую выборку и получение `pkgarch`; п
 `openwrt-build.env`. Изменения reusable workflow затрагивают все
 репозитории `*-openwrt-package`, особенно использующие `@main`.
 Проверка выполнения CI требует GitHub Actions и доступа к SDK.
+Локальные регрессионные тесты: `sh tests/run.sh` (без Docker и сети).
+
+## Версии и каналы OpenWrt
+
+Версия указывается явно, независимо от пути, куда сохраняются APK:
+
+| Значение | Ветка OpenWrt | Каталог SDK |
+|---|---|---|
+| `25.12.6` | стабильный релиз | `releases/25.12.6/targets/` |
+| `25.12-SNAPSHOT` | снапшот ветки 25.12 | `releases/25.12-SNAPSHOT/targets/` |
+| `SNAPSHOT` | master (текущая разработка) | `snapshots/targets/` |
+| `master` | псевдоним `SNAPSHOT` | `snapshots/targets/` |
+
+`master` и `SNAPSHOT` обозначают **один канал**: это не отдельные ветки
+сборки. Для релизных веток Snapshot указывается префикс версии, например
+`25.12-SNAPSHOT`.
+
+При сборке Snapshot SDK всегда скачивается заново: его архив может меняться,
+не меняя имени. GitHub Actions не кэширует его между запусками. Snapshot APK
+может перестать соответствовать прошивке после обновления ABI или репозиториев
+OpenWrt; тестируйте на совместимом снимке системы.
 
 ## Сборка
 
-Конкретный список OpenWrt-версий, target и subtarget формируется `openwrt-matrix.py`.
+Конкретный список OpenWrt target и subtarget формируется `openwrt-matrix.py`.
 
 Сам пакет собирается `openwrt-build.sh` в соответствующем OpenWrt SDK.
 
@@ -86,7 +109,43 @@ jobs:
     uses: karen07/openwrt-package-ci/.github/workflows/openwrt-build.yml@main
 ```
 
-При запуске CI reusable workflow получает содержимое вызывающего репозитория, загружает общие build scripts из `openwrt-package-ci` и запускает сборку с параметрами из `openwrt-build.env`.
+Пример вызова reusable workflow для master Snapshot:
+
+```yaml
+jobs:
+  build:
+    uses: karen07/openwrt-package-ci/.github/workflows/openwrt-build.yml@main
+    with:
+      openwrt_version: SNAPSHOT
+      package: all
+      include: x86/64
+```
+
+Для стабильной версии замените `SNAPSHOT` на `25.12.6`, а для Snapshot ветки
+25.12 - на `25.12-SNAPSHOT`. Старый вход `tag_name` продолжает работать,
+но новое имя `openwrt_version` однозначнее. Если указаны оба, приоритет
+имеет `openwrt_version`.
+
+При запуске CI reusable workflow получает содержимое вызывающего репозитория,
+загружает общие build scripts из `openwrt-package-ci` и запускает сборку с
+параметрами из `openwrt-build.env`.
+
+Точно такой же выбор работает при ручной сборке:
+
+```sh
+./openwrt-build.sh build-target all 25.12.6 x86 64 x86_64 artifacts
+./openwrt-build.sh build-target all 25.12-SNAPSHOT x86 64 x86_64 artifacts
+./openwrt-build.sh build-target all SNAPSHOT x86 64 x86_64 artifacts
+./openwrt-build.sh build-target all master x86 64 x86_64 artifacts
+```
+
+Последний аргумент `artifacts` - **название выходного каталога**, а не
+канал OpenWrt. Его можно заменить любым другим каталогом или вовсе
+опустить (тогда APK сохраняется в текущем каталоге).
+
+Snapshot в GitHub Actions загружается как артефакт выполнения, а не в
+GitHub Release с постоянно перезаписываемым тегом `vSNAPSHOT`. Для
+стабильных версий логика GitHub Releases не меняется.
 
 Пример `openwrt-build.env`:
 
@@ -111,7 +170,8 @@ amneziawg=kmod-amneziawg
 
 - `.github/workflows/openwrt-build.yml` - общий reusable GitHub Actions workflow;
 - `openwrt-build.sh` - сборка пакетов через OpenWrt SDK;
-- `openwrt-matrix.py` - генератор списка OpenWrt target/subtarget для matrix build.
+- `openwrt-matrix.py` - генератор списка OpenWrt target/subtarget для matrix build;
+- `tests/` - автономные проверки версий, путей SDK и workflow (без загрузки SDK).
 
 ## Лицензия
 
