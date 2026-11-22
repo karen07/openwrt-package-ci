@@ -124,13 +124,11 @@ Examples:
   ./openwrt-build.sh build-target all 25.12.6 x86 64 x86_64 artifacts
   ./openwrt-build.sh build-target all 25.12-SNAPSHOT x86 64 x86_64 artifacts
   ./openwrt-build.sh build-target all SNAPSHOT x86 64 x86_64 artifacts
-  ./openwrt-build.sh build-target all master x86 64 x86_64 artifacts
 
 Versions:
   25.12.6         Stable release: releases/25.12.6/
   25.12-SNAPSHOT  Release-branch snapshot: releases/25.12-SNAPSHOT/
   SNAPSHOT        Development snapshot (OpenWrt master): snapshots/
-  master          Alias for SNAPSHOT
 
 The optional [output-dir] is only a local directory for APK files.
 It does not select the OpenWrt release or snapshot channel.
@@ -259,7 +257,10 @@ fi
 # snapshots keep their release prefix (e.g. 25.12-SNAPSHOT).
 VERSION="${VERSION#v}"
 case "$VERSION" in
-    master | MASTER | snapshot | SNAPSHOT)
+    [mM][aA][sS][tT][eE][rR])
+        die "OpenWrt master is published as SNAPSHOT; use SNAPSHOT instead of master"
+        ;;
+    snapshot | SNAPSHOT)
         VERSION=SNAPSHOT
         ;;
     *-snapshot)

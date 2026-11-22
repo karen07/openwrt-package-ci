@@ -68,11 +68,11 @@ include/exclude, пустую выборку и получение `pkgarch`; п
 | `25.12.6` | стабильный релиз | `releases/25.12.6/targets/` |
 | `25.12-SNAPSHOT` | снапшот ветки 25.12 | `releases/25.12-SNAPSHOT/targets/` |
 | `SNAPSHOT` | master (текущая разработка) | `snapshots/targets/` |
-| `master` | псевдоним `SNAPSHOT` | `snapshots/targets/` |
 
-`master` и `SNAPSHOT` обозначают **один канал**: это не отдельные ветки
-сборки. Для релизных веток Snapshot указывается префикс версии, например
-`25.12-SNAPSHOT`.
+Для сборки OpenWrt `master` передавайте `SNAPSHOT`: это имя канала
+публикации SDK. Аргумент `master` не принимается, чтобы не путать ветку
+Git с версией OpenWrt. Для релизных веток Snapshot указывается
+префикс версии, например `25.12-SNAPSHOT`.
 
 При сборке Snapshot SDK всегда скачивается заново: его архив может меняться,
 не меняя имени. GitHub Actions не кэширует его между запусками. Snapshot APK
@@ -136,7 +136,6 @@ jobs:
 ./openwrt-build.sh build-target all 25.12.6 x86 64 x86_64 artifacts
 ./openwrt-build.sh build-target all 25.12-SNAPSHOT x86 64 x86_64 artifacts
 ./openwrt-build.sh build-target all SNAPSHOT x86 64 x86_64 artifacts
-./openwrt-build.sh build-target all master x86 64 x86_64 artifacts
 ```
 
 Последний аргумент `artifacts` - **название выходного каталога**, а не

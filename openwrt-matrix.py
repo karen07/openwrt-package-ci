@@ -10,7 +10,6 @@ Examples:
     ./openwrt-matrix.py 25.12.6
     ./openwrt-matrix.py 25.12-SNAPSHOT 'x86/64'
     ./openwrt-matrix.py SNAPSHOT 'x86/64'
-    ./openwrt-matrix.py master 'x86/64'
     ./openwrt-matrix.py 25.12.6 '*'
     ./openwrt-matrix.py 25.12.6 'x86/*'
     ./openwrt-matrix.py 25.12.6 'x86/64,mediatek/filogic'
@@ -89,7 +88,10 @@ def normalize_version(version: str) -> str:
     if not version:
         die("OpenWrt version is required")
 
-    if version.lower() in {"master", "snapshot"}:
+    if version.lower() == "master":
+        die("OpenWrt master is published as SNAPSHOT; use SNAPSHOT instead of master")
+
+    if version.lower() == "snapshot":
         return "SNAPSHOT"
 
     if version.lower().endswith("-snapshot"):
@@ -299,7 +301,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
     parser.add_argument(
         "version",
-        help="OpenWrt version (25.12.6, 25.12-SNAPSHOT, SNAPSHOT, or master)",
+        help="OpenWrt version (25.12.6, 25.12-SNAPSHOT, or SNAPSHOT)",
     )
 
     parser.add_argument(

@@ -57,7 +57,11 @@ jobs:
           version="${version#v}"
 
           case "${version,,}" in
-            master|snapshot)
+            master)
+              echo "OpenWrt master is published as SNAPSHOT; use SNAPSHOT instead of master" >&2
+              exit 1
+              ;;
+            snapshot)
               version=SNAPSHOT
               ;;
             *-snapshot)
