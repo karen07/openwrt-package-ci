@@ -336,6 +336,25 @@ SDK_ARCHIVE=$(
 
 [ -n "$SDK_ARCHIVE" ] || die "Cannot find SDK archive"
 
+# Directory listings may use href="./openwrt-sdk-...". Keep only the
+# filename, while rejecting unexpected paths and unsafe archive names.
+SDK_ARCHIVE="${SDK_ARCHIVE#./}"
+case "$SDK_ARCHIVE" in
+    openwrt-sdk-*.tar.zst | openwrt-sdk-*.tar.xz | openwrt-sdk-*.tar.gz)
+        ;;
+    *)
+        die "Unexpected SDK filename: $SDK_ARCHIVE"
+        ;;
+esac
+case "$SDK_ARCHIVE" in
+    *[!a-zA-Z0-9._-]* | *..*)
+        die "Unsafe SDK filename: $SDK_ARCHIVE"
+        ;;
+    *)
+        :
+        ;;
+esac
+
 case "$SDK_ARCHIVE" in
     *.tar.zst)
         need_cmd zstd
@@ -357,10 +376,6 @@ esac
 # Snapshot SDK filenames may stay unchanged across daily rebuilds. Never
 # reuse an older archive or extracted SDK for a moving snapshot.
 if [ "$IS_SNAPSHOT" -eq 1 ]; then
-    case "$SDK_ARCHIVE" in
-        openwrt-sdk-*.tar.xz | openwrt-sdk-*.tar.zst | openwrt-sdk-*.tar.gz) ;;
-        *) die "Unexpected SDK filename: $SDK_ARCHIVE" ;;
-    esac
     rm -f "$SDK_ARCHIVE" || die "Cannot remove old snapshot SDK archive"
     rm -rf "$SDK_DIR" || die "Cannot remove old snapshot SDK directory"
 fi
