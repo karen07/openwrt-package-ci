@@ -106,8 +106,8 @@ def normalize_version(version: str) -> str:
     return version
 
 
-def version_channel(version: str) -> str:
-    """Return a downloads.openwrt.org path prefix for a canonical version."""
+def download_path(version: str) -> str:
+    """Return the directory relative to the OpenWrt download mirror root."""
     if version == "SNAPSHOT":
         return "snapshots"
     return f"releases/{version}"
@@ -241,7 +241,7 @@ def openwrt_matrix(
     version = normalize_version(version)
     base_url = (
         "https://mirror.berlin.freifunk.net/downloads.openwrt.org/"
-        f"{version_channel(version)}/targets/"
+        f"{download_path(version)}/targets/"
     )
 
     targets = directory_links(base_url)

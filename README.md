@@ -57,7 +57,6 @@ include/exclude, пустую выборку и получение `pkgarch`; п
 `openwrt-build.env`. Изменения reusable workflow затрагивают все
 репозитории `*-openwrt-package`, особенно использующие `@main`.
 Проверка выполнения CI требует GitHub Actions и доступа к SDK.
-Локальные регрессионные тесты: `sh tests/run.sh` (без Docker и сети).
 
 ## Версии и каналы OpenWrt
 
@@ -170,7 +169,6 @@ amneziawg=kmod-amneziawg
 - `.github/workflows/openwrt-build.yml` - общий reusable GitHub Actions workflow;
 - `openwrt-build.sh` - сборка пакетов через OpenWrt SDK;
 - `openwrt-matrix.py` - генератор списка OpenWrt target/subtarget для matrix build;
-- `tests/` - автономные проверки версий, путей SDK и workflow (без загрузки SDK).
 
 ## Лицензия
 
